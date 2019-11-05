@@ -1,0 +1,26 @@
+java_library {
+    name: "mtk-telephony-hidl",
+    static_libs: [
+        "vendor.mediatek.hardware.radio-V3.0-java-shallow",
+    ],
+    jarjar_rules: ":framework-jarjar-rules",
+}
+
+java_library {
+    name: "mtk-telephony-ext",
+    installable: true,
+    static_libs: [
+        "mtk-telephony-hidl",
+    ],
+    libs: [
+        "telephony-common",
+        "telephony-ext",
+        "android.hardware.radio-V1.0-java",
+        "android.hardware.radio-V1.1-java",
+        "android.hardware.radio-V1.2-java",
+    ],
+    jarjar_rules: ":framework-jarjar-rules",
+    srcs: [
+        "src/**/*.java",
+    ],
+}
