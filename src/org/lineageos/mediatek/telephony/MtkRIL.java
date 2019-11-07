@@ -20,6 +20,7 @@ import com.android.internal.telephony.RILRequest;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
+import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class MtkRIL extends RIL {
@@ -76,7 +77,7 @@ public class MtkRIL extends RIL {
                     mMtkRadioProxy3.setResponseFunctionsMtk(mMtkRadioResponse3, mMtkRadioIndication3);
                     return mMtkRadioProxy3;
                 }
-            } catch (RemoteException e) {
+            } catch (RemoteException | NoSuchElementException e) {
                 riljLogMtk("MTK RadioProxy 3.0 is not available");
                 return null;
             }
