@@ -1,6 +1,7 @@
 java_library {
     name: "mtk-telephony-hidl",
     static_libs: [
+        "vendor.mediatek.hardware.radio-V2.0-java-shallow",
         "vendor.mediatek.hardware.radio-V3.0-java-shallow",
     ],
     jarjar_rules: ":framework-jarjar-rules",

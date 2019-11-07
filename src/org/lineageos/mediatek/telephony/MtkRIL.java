@@ -27,9 +27,16 @@ public class MtkRIL extends RIL {
     private static final String LOG_TAG = "MtkRIL";
     static final String[] HIDL_SERVICE_NAME = {"slot1", "slot2", "slot3"};
 
+    // ++ Mtk Radio 2.0
+    vendor.mediatek.hardware.radio.V2_0.IRadioIndication mMtkRadioIndication2;
+    vendor.mediatek.hardware.radio.V2_0.IRadioResponse mMtkRadioResponse2;
+    volatile vendor.mediatek.hardware.radio.V2_0.IRadio mMtkRadioProxy2 = null;
+    // -- Mtk Radio 2.0
+    // ++ Mtk Radio 3.0
     vendor.mediatek.hardware.radio.V3_0.IRadioIndication mMtkRadioIndication3;
     vendor.mediatek.hardware.radio.V3_0.IRadioResponse mMtkRadioResponse3;
     volatile vendor.mediatek.hardware.radio.V3_0.IRadio mMtkRadioProxy3 = null;
+    // -- Mtk Radio 3.0
     final AtomicLong mMtkRadioProxyCookie = new AtomicLong(0);
     final Handler mMtkRilHandler = new MtkRilHandler();
     final MtkRadioProxyDeathRecipient mMtkRadioProxyDeathRecipient = new MtkRadioProxyDeathRecipient();
@@ -44,7 +51,7 @@ public class MtkRIL extends RIL {
             int cdmaSubscription, Integer instanceId) {
         super(context, preferredNetworkType, cdmaSubscription, instanceId);
         mMtkPhoneId = instanceId == null ? 0 : instanceId;
-        getRadioProxyMtk3(); // Make sure our MTK RadioProxy is loaded
+        ensureMtkRadioProxy(); // Make sure our MTK RadioProxy is loaded
         riljLogMtk("MTK RIL extension loaded");
     }
 
@@ -56,12 +63,42 @@ public class MtkRIL extends RIL {
             // The first call to this function is made in super(),
             // during which we haven't initialized yet. Corresponding
             // checks are placed in getRadioProxyMtk()
-            getRadioProxyMtk3();
+            ensureMtkRadioProxy();
         }
         return radioProxy;
     }
 
-    public synchronized vendor.mediatek.hardware.radio.V3_0.IRadio getRadioProxyMtk3() {
+    private synchronized void ensureMtkRadioProxy() {
+        if (getRadioProxyMtk3() == null) {
+            getRadioProxyMtk2();
+        }
+    }
+
+    private synchronized vendor.mediatek.hardware.radio.V2_0.IRadio getRadioProxyMtk2() {
+        if (mMtkRadioProxy2 == null && mMtkPhoneId != null && mMtkRadioProxyCookie != null) {
+            try {
+                mMtkRadioProxy2 =
+                    vendor.mediatek.hardware.radio.V2_0.IRadio.getService(
+                        HIDL_SERVICE_NAME[mMtkPhoneId]);
+                if (mMtkRadioProxy2 != null) {
+                    mMtkRadioProxy2.linkToDeath(mMtkRadioProxyDeathRecipient,
+                        mMtkRadioProxyCookie.incrementAndGet());
+                    if (mMtkRadioResponse2 == null && mMtkRadioIndication2 == null) {
+                        mMtkRadioResponse2 = new MtkRadioResponse2(this, getRadioResponse());
+                        mMtkRadioIndication2 = new MtkRadioIndication2(this, getRadioIndication());
+                    }
+                    mMtkRadioProxy2.setResponseFunctionsMtk(mMtkRadioResponse2, mMtkRadioIndication2);
+                    return mMtkRadioProxy2;
+                }
+            } catch (RemoteException | NoSuchElementException e) {
+                riljLogMtk("MTK RadioProxy 2.0 is not available");
+                return null;
+            }
+        }
+        return mMtkRadioProxy2;
+    }
+
+    private synchronized vendor.mediatek.hardware.radio.V3_0.IRadio getRadioProxyMtk3() {
         if (mMtkRadioProxy3 == null && mMtkPhoneId != null && mMtkRadioProxyCookie != null) {
             try {
                 mMtkRadioProxy3 =
@@ -97,9 +134,10 @@ public class MtkRIL extends RIL {
 
     void resetRadioProxyMtk() {
         riljLogMtk("MTK RadioProxy died; retrying");
+        mMtkRadioProxy2 = null;
         mMtkRadioProxy3 = null;
         mMtkRadioProxyCookie.incrementAndGet();
-        getRadioProxyMtk3();
+        ensureMtkRadioProxy();
     }
 
     void riljLogMtk(String msg) {
@@ -109,12 +147,23 @@ public class MtkRIL extends RIL {
     void setCallIndication(int callId, int seqNo) {
         // Ensure that mMtkRadioProxy is updated.
         vendor.mediatek.hardware.radio.V3_0.IRadio radioProxy3 = getRadioProxyMtk3();
-        if (radioProxy3 != null) {
-            RILRequest rr = obtainRequestMtk(2016 /* RIL_REQUEST_SET_CALL_INDICATION */, null, mRILDefaultWorkSource);
+        vendor.mediatek.hardware.radio.V2_0.IRadio radioProxy2 = getRadioProxyMtk2();
+        RILRequest rr = null;
+        if (radioProxy2 != null || radioProxy3 != null) {
+            rr = obtainRequestMtk(2016 /* RIL_REQUEST_SET_CALL_INDICATION */, null, mRILDefaultWorkSource);
             riljLogMtk(rr.getSerial() + "> " + "setCallIndication");
+        }
 
+        if (radioProxy3 != null) {
             try {
                 radioProxy3.setCallIndication(
+                    rr.getSerial(), 0 /* 0: allowed, 1: disallowed */, callId, seqNo);
+            } catch (RemoteException | RuntimeException e) {
+                riljLogMtk("failed to call setCallIndication");
+            }
+        } else if (radioProxy2 != null) {
+            try {
+                radioProxy2.setCallIndication(
                     rr.getSerial(), 0 /* 0: allowed, 1: disallowed */, callId, seqNo);
             } catch (RemoteException | RuntimeException e) {
                 riljLogMtk("failed to call setCallIndication");
