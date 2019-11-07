@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class MtkRIL extends RIL {
     private static final String LOG_TAG = "MtkRIL";
+    // Should be kept in sync with RIL.HIDL_SERVICE_NAME
     static final String[] HIDL_SERVICE_NAME = {"slot1", "slot2", "slot3"};
 
     // ++ Mtk Radio 2.0
