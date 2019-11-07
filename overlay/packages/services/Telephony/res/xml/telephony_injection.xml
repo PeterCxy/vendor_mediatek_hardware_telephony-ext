@@ -25,5 +25,6 @@
             e.g. com.android.internal.telephony.ServiceStateTracker
         -->
         <component>com.android.internal.telephony.RIL</component>
+        <component>com.android.internal.telephony.dataconnection.DcTracker</component>
     </components>
 </injection>
