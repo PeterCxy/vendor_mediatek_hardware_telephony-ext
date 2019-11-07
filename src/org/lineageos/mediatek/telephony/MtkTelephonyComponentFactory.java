@@ -11,6 +11,7 @@ import com.android.internal.telephony.dataconnection.DcTracker;
 import org.lineageos.mediatek.telephony.dataconnection.MtkDcTracker;
 
 public class MtkTelephonyComponentFactory extends TelephonyComponentFactory {
+    @Override
     public RIL makeRIL(Context context, int preferredNetworkType,
             int cdmaSubscription, Integer instanceId) {
         return new MtkRIL(context, preferredNetworkType, cdmaSubscription, instanceId);
