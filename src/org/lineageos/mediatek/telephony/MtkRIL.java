@@ -1,12 +1,14 @@
 package org.lineageos.mediatek.telephony;
 
 import android.content.Context;
+import android.net.LinkProperties;
 import android.os.Handler;
 import android.os.HwBinder;
 import android.os.Message;
 import android.os.RemoteException;
 import android.os.WorkSource;
 import android.telephony.Rlog;
+import android.telephony.data.DataProfile;
 
 import android.hardware.radio.V1_0.IRadio;
 
@@ -80,6 +82,16 @@ public class MtkRIL extends RIL {
             }
         }
         return mMtkRadioProxy3;
+    }
+
+    @Override
+    public void setupDataCall(int accessNetworkType, DataProfile dataProfile, boolean isRoaming,
+                              boolean allowRoaming, int reason, LinkProperties linkProperties,
+                              Message result) {
+        riljLogMtk("Forcing setDataAllowed() before setupDataCall()");
+        setDataAllowed(true, null);
+        super.setupDataCall(accessNetworkType, dataProfile, isRoaming, allowRoaming, reason,
+            linkProperties, result);
     }
 
     void resetRadioProxyMtk() {
